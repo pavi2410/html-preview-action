@@ -8,6 +8,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Get HTML preview link
-        uses: ./
+        uses: pavi2410/html-preview-action@master
         with:
           gh_token: ${{ secrets.GITHUB_TOKEN }}
