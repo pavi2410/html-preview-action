@@ -1,13 +1,21 @@
-name: 'Wait'
-description: 'Wait a designated number of milliseconds'
+name: 'HTML Preview'
+author: 'Pavitra Golchha | @pavi2410'
+description: 'Preview HTML page in PR'
 inputs:
-  milliseconds:  # id of input
-    description: 'number of milliseconds to wait'
+  msg:
+    description: 'The message to display on PR comment'
     required: true
-    default: '1000'
-outputs:
-  time: # output will be available to future steps 
-    description: 'The message to output'
+    default: 'Click here to preview HTML page in browser'
+  html_file:
+    description: 'The HTML file you want to preview'
+    required: true
+    default: 'index.html'
+  gh_token:
+    description: 'GitHub Token'
+    required: true
 runs:
   using: 'node12'
   main: 'dist/index.js'
+branding:
+  color: 'orange'
+  icon: 'eye'

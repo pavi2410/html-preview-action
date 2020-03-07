@@ -1,22 +1,23 @@
-const core = require('@actions/core');
-const wait = require('./wait');
+const core = require("@actions/core");
+const {context, GitHub} = require("@actions/github");
 
-
-// most @actions toolkit packages have async methods
 async function run() {
-  try { 
-    const ms = core.getInput('milliseconds');
-    console.log(`Waiting ${ms} milliseconds ...`)
+    try {
+        const msg = core.getInput("msg");
+        const html_file = core.getInput("html_file");
+        const gh_token = core.getInput("gh_token");
 
-    core.debug((new Date()).toTimeString())
-    await wait(parseInt(ms));
-    core.debug((new Date()).toTimeString())
+        const {sha, repo: {owner, repo}} = context;
+        const client = new GitHub(gh_token);
 
-    core.setOutput('time', new Date().toTimeString());
-  } 
-  catch (error) {
-    core.setFailed(error.message);
-  }
+        await client.issues.createComment({
+            owner, repo,
+            issue_number: context.payload.pull_request.number,
+            body: `[${msg}](https://htmlpreview.github.io/?https://github.com/${owner}/${repo}/blob/${sha}/${html_file})`
+        });
+    } catch (error) {
+        core.setFailed(error);
+    }
 }
 
-run()
+run();
