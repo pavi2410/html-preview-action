@@ -8,9 +8,13 @@ This is just a novelty action, but feel free to use it. If you'd like to contrib
 
 ```yaml
 - name: HTML Preview
-  uses: pavi2410/html-preview-action@master
+  id: html_preview
+  uses: pavi2410/html-preview-action@v2
   with:
-    msg: 'Click here to preview HTML page in browser'
     html_file: 'index.html'
-    gh_token: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+To get the `url` output, use this `steps.html_preview.outputs.url` in your later steps.
+
+## Credits
+https://github.com/htmlpreview/htmlpreview.github.com
