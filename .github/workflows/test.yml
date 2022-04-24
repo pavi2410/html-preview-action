@@ -1,16 +1,35 @@
-name: 'HTML Preview Action'
-on: [pull_request]
+name: website
+
+on: push
 
 jobs:
-  html_preview:
+  publish:
     runs-on: ubuntu-latest
-    name: HTML Preview
     steps:
-      - uses: actions/checkout@v2
-      - name: Get HTML preview link
-        id: html_preview
-        uses: ./ # NOTE: replace with the latest version of this Action
-      - uses: github-actions-up-and-running/pr-comment@v1.0.0
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+      -
+        name: Gen dummy page
+        run: |
+          mkdir public
+          cat > public/index.html <<EOL
+          <!doctype html>
+          <html>
+            <head>
+              <title>GitHub Pages deployed!</title>
+            </head>
+            <body>
+              <p>GitHub Pages with <strong>${{ github.sha }}</strong> commit ID has been deployed through <a href="https://github.com/marketplace/actions/github-pages">GitHub Pages action</a> successfully.</p>
+            </body>
+          </html>
+          EOL
+      -
+        name: Deploy to GitHub Pages
+        if: success()
+        uses: crazy-max/ghaction-github-pages@v2
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          message: ${{ format('[Click here to preview HTML page in browser]({0})', steps.html_preview.outputs.url) }}
+          target_branch: gh-pages
+          build_dir: public
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
