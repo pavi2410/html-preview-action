@@ -15,7 +15,5 @@ jobs:
       - name: Get HTML preview link
         id: html_preview
         uses: ./ # NOTE: replace with the latest version of this Action
-      - uses: github-actions-up-and-running/pr-comment@v1.0.0
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          message: ${{ format('[Click here to preview the HTML page in your browser]({0})', steps.html_preview.outputs.url) }}
+      - name: Log HTML Preview URL
+        run: echo '{{ steps.html_preview.outputs.url) }}'
