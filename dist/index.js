@@ -30945,14 +30945,21 @@ var __webpack_exports__ = {};
 
 
 try {
-    const html_file = (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)("html_file");
+    const htmlFile = (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)("html_file");
+    const jobSummary = (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getBooleanInput)("job_summary");
 
     const { sha, repo: { owner, repo } } = _actions_github__WEBPACK_IMPORTED_MODULE_1__.context;
 
-    (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput)(
-        "url",
-        `https://htmlpreview.github.io/?https://github.com/${owner}/${repo}/blob/${sha}/${html_file}`
-    );
+    const previewUrl = `https://htmlpreview.github.io/?https://github.com/${owner}/${repo}/blob/${sha}/${htmlFile}`;
+
+    (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput)("url", previewUrl);
+
+    if (jobSummary) {
+        _actions_core__WEBPACK_IMPORTED_MODULE_0__.summary.addHeading('HTML Preview Action')
+            .addRaw(`Using HTML file: ${htmlFile}`)
+            .addLink('Click here to preview the HTML page in your browser', previewUrl)
+            .write();
+    }
 } catch (e) {
     (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setFailed)(e.message);
 }

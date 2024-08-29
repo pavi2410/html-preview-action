@@ -6,6 +6,10 @@ inputs:
     description: 'The HTML file you want to preview, relative to the root of the repo'
     required: true
     default: 'index.html'
+  job_summary:
+    description: 'Prints a job summary with the link'
+    required: false
+    default: true
 outputs:
   url:
     description: 'The URL of the HTML file specific to this build'
