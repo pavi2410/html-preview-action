@@ -16,4 +16,4 @@ jobs:
         id: html_preview
         uses: ./ # NOTE: replace with the latest version of this Action
       - name: Log HTML Preview URL
-        run: echo '{{ steps.html_preview.outputs.url }}'
+        run: echo "${{ steps.html_preview.outputs.url }}"
