@@ -30958,6 +30958,7 @@ try {
         _actions_core__WEBPACK_IMPORTED_MODULE_0__.summary.addHeading('HTML Preview Action')
             .addRaw(`Using HTML file: \`${htmlFile}\``)
             .addBreak()
+            .addBreak()
             .addLink('Click here to preview the HTML page in your browser', previewUrl)
             .write();
     }

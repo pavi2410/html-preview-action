@@ -14,7 +14,8 @@ try {
     if (jobSummary) {
         summary
             .addHeading('HTML Preview Action')
-            .addRaw(`Using HTML file: \`${htmlFile}\``)
+            .addRaw(`Using HTML file: ${htmlFile}`)
+            .addBreak()
             .addBreak()
             .addLink('Click here to preview the HTML page in your browser', previewUrl)
             .write();
