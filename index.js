@@ -1,19 +1,15 @@
-const core = require("@actions/core");
-const {context} = require("@actions/github");
+import { getInput, setOutput, setFailed } from "@actions/core";
+import { context } from "@actions/github";
 
-async function run() {
-    try {
-        const html_file = core.getInput("html_file");
+try {
+    const html_file = getInput("html_file");
 
-        const {sha, repo: {owner, repo}} = context;
+    const { sha, repo: { owner, repo } } = context;
 
-        core.setOutput(
-            "url",
-            `https://htmlpreview.github.io/?https://github.com/${owner}/${repo}/blob/${sha}/${html_file}`
-        );
-    } catch (e) {
-        core.setFailed(e.message);
-    }
+    setOutput(
+        "url",
+        `https://htmlpreview.github.io/?https://github.com/${owner}/${repo}/blob/${sha}/${html_file}`
+    );
+} catch (e) {
+    setFailed(e.message);
 }
-
-run()

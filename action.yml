@@ -10,7 +10,7 @@ outputs:
   url:
     description: 'The URL of the HTML file specific to this build'
 runs:
-  using: 'node12'
+  using: 'node20'
   main: 'dist/index.js'
 branding:
   color: 'orange'
