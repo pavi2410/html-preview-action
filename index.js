@@ -1,25 +1,31 @@
 import { getInput, setOutput, setFailed, summary, getBooleanInput } from "@actions/core";
 import { context } from "@actions/github";
 
-try {
-    const htmlFile = getInput("html_file");
+async function run() {
+    const htmlFile = getInput("html_file", { required: true });
     const jobSummary = getBooleanInput("job_summary");
 
-    const { sha, repo: { owner, repo } } = context;
+    const {
+        sha,
+        repo: { owner, repo },
+    } = context;
 
-    const previewUrl = `https://htmlpreview.github.io/?https://github.com/${owner}/${repo}/blob/${sha}/${htmlFile}`;
+    const sourceUrl = encodeURI(`https://github.com/${owner}/${repo}/blob/${sha}/${htmlFile}`);
+    const previewUrl = `https://htmlpreview.github.io/?${sourceUrl}`;
 
     setOutput("url", previewUrl);
 
     if (jobSummary) {
-        summary
-            .addHeading('HTML Preview Action')
+        await summary
+            .addHeading("HTML Preview Action")
             .addRaw(`Using HTML file: ${htmlFile}`)
             .addBreak()
             .addBreak()
-            .addLink('Click here to preview the HTML page in your browser', previewUrl)
+            .addLink("Click here to preview the HTML page in your browser", previewUrl)
             .write();
     }
-} catch (e) {
-    setFailed(e.message);
 }
+
+run().catch((error) => {
+    setFailed(error instanceof Error ? error.message : String(error));
+});

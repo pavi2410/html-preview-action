@@ -14,7 +14,7 @@ outputs:
   url:
     description: 'The URL of the HTML file specific to this build'
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist/index.js'
 branding:
   color: 'orange'

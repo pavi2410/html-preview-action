@@ -4,16 +4,15 @@
   "description": "GitHub action to preview HTML page",
   "private": true,
   "type": "module",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "packageManager": "bun@1.3.10",
   "scripts": {
-    "package": "ncc build index.js -o dist"
+    "build": "bun build ./index.js --target=node --outfile ./dist/index.js",
+    "package": "bun run build"
   },
   "license": "MIT",
   "dependencies": {
-    "@actions/core": "^1.10.1",
-    "@actions/github": "^6.0.0"
-  },
-  "devDependencies": {
-    "@vercel/ncc": "^0.38.1"
+    "@actions/core": "^3.0.0",
+    "@actions/github": "^9.0.0"
   }
 }
