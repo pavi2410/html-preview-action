@@ -15,9 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-          cache: true
       - uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -34,6 +31,7 @@ jobs:
         run: pnpm build
 
   preview_single_file:
+    needs: quality
     runs-on: ubuntu-latest
     name: Preview Single File
     permissions:
@@ -42,9 +40,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-          cache: true
       - uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -73,6 +68,7 @@ jobs:
           test -n "${{ steps.single_file_preview.outputs.artifact_url }}"
 
   preview_multi_file_default:
+    needs: quality
     runs-on: ubuntu-latest
     name: Preview Multi File Default
     permissions:
@@ -81,9 +77,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-          cache: true
       - uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -113,6 +106,7 @@ jobs:
           test -n "${{ steps.generated_site_preview.outputs.artifact_manifest }}"
 
   preview_multi_file_archive:
+    needs: quality
     runs-on: ubuntu-latest
     name: Preview Multi File Archive
     permissions:
@@ -121,9 +115,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-          cache: true
       - uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -153,6 +144,7 @@ jobs:
           test -n "${{ steps.generated_site_archive_preview.outputs.artifact_url }}"
 
   preview_repo_mode:
+    needs: quality
     runs-on: ubuntu-latest
     name: Preview Repo Mode
     permissions:
@@ -160,9 +152,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-          cache: true
       - uses: actions/setup-node@v6
         with:
           node-version: 24
