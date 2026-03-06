@@ -1,18 +1,65 @@
 name: 'HTML Preview'
 author: 'Pavitra Golchha | @pavi2410'
-description: 'Preview HTML page'
+description: 'Upload preview artifacts for HTML files and generated sites'
 inputs:
+  mode:
+    description: 'Preview mode to use'
+    required: false
+    default: 'artifact'
+  artifact_format:
+    description: 'Artifact delivery format for artifact mode'
+    required: false
+    default: 'raw'
   html_file:
-    description: 'The HTML file you want to preview, relative to the root of the repo'
+    description: 'The entry HTML file to preview, relative to site_root'
     required: true
     default: 'index.html'
+  site_root:
+    description: 'The root directory used for resolving the entry HTML file and related assets/pages'
+    required: false
+    default: '.'
+  artifact_name:
+    description: 'Optional archive artifact name, or raw artifact filename prefix when uploading multiple files'
+    required: false
+  retention_days:
+    description: 'Artifact retention in days, or 0 to use the repository default'
+    required: false
+    default: '0'
   job_summary:
     description: 'Prints a job summary with the link'
     required: false
     default: true
 outputs:
   url:
-    description: 'The URL of the HTML file specific to this build'
+    description: 'The primary preview URL for this action run'
+  artifact_url:
+    description: 'The primary uploaded artifact URL when mode is artifact'
+  artifact_id:
+    description: 'The primary uploaded artifact ID when mode is artifact'
+  artifact_name:
+    description: 'The primary uploaded artifact name when mode is artifact'
+  artifact_count:
+    description: 'The number of artifacts uploaded in artifact mode'
+  artifact_names:
+    description: 'JSON array of uploaded artifact names in artifact mode'
+  artifact_ids:
+    description: 'JSON array of uploaded artifact IDs in artifact mode'
+  artifact_urls:
+    description: 'JSON array of uploaded artifact URLs in artifact mode'
+  artifact_manifest:
+    description: 'JSON array describing each uploaded artifact and its source relative path'
+  source_url:
+    description: 'The source blob URL when mode is repo'
+  mode:
+    description: 'The resolved preview mode'
+  upload_strategy:
+    description: 'The upload strategy used for artifact mode'
+  discovered_files_count:
+    description: 'The number of files discovered for the preview payload'
+  skipped_references_count:
+    description: 'The number of references skipped during discovery'
+  comment_body:
+    description: 'Markdown text that can be forwarded to a PR comment action'
 runs:
   using: 'node24'
   main: 'dist/index.js'

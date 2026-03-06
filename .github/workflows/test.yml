@@ -1,10 +1,14 @@
 name: Test
 
-on: 
+on:
   workflow_dispatch:
   pull_request:
   push:
     branches: master
+
+permissions:
+  actions: write
+  contents: read
 
 jobs:
   test:
@@ -12,8 +16,77 @@ jobs:
     name: HTML Preview
     steps:
       - uses: actions/checkout@v4
-      - name: Get HTML preview link
-        id: html_preview
-        uses: ./ # NOTE: replace with the latest version of this Action
-      - name: Log HTML Preview URL
-        run: echo "${{ steps.html_preview.outputs.url }}"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Run unit tests
+        run: bun run test
+      - name: Build action bundle
+        run: bun run build
+      - name: Prepare generated single-file site
+        run: |
+          mkdir -p .tmp/generated-single
+          cp test/fixtures/basic-single-file/index.html .tmp/generated-single/index.html
+      - name: Upload generated single-file preview
+        id: single_file_preview
+        uses: ./
+        with:
+          html_file: index.html
+          site_root: .tmp/generated-single
+          artifact_name: generated-single-preview
+      - name: Assert single-file preview outputs
+        run: |
+          test "${{ steps.single_file_preview.outputs.mode }}" = "artifact"
+          test "${{ steps.single_file_preview.outputs.upload_strategy }}" = "raw"
+          test "${{ steps.single_file_preview.outputs.artifact_count }}" = "1"
+          test "${{ steps.single_file_preview.outputs.discovered_files_count }}" = "1"
+          test -n "${{ steps.single_file_preview.outputs.artifact_url }}"
+      - name: Prepare generated multi-file site
+        run: |
+          mkdir -p .tmp/generated-site
+          cp -R test/fixtures/linked-pages/. .tmp/generated-site/
+      - name: Upload generated multi-file preview
+        id: generated_site_preview
+        uses: ./
+        with:
+          html_file: index.html
+          site_root: .tmp/generated-site
+          artifact_name: generated-site-preview
+      - name: Assert multi-file preview outputs
+        run: |
+          test "${{ steps.generated_site_preview.outputs.mode }}" = "artifact"
+          test "${{ steps.generated_site_preview.outputs.upload_strategy }}" = "multi_raw"
+          test "${{ steps.generated_site_preview.outputs.artifact_count }}" = "6"
+          test "${{ steps.generated_site_preview.outputs.discovered_files_count }}" = "6"
+          test -n "${{ steps.generated_site_preview.outputs.artifact_url }}"
+          test -n "${{ steps.generated_site_preview.outputs.artifact_manifest }}"
+      - name: Upload generated multi-file preview as archive
+        id: generated_site_archive_preview
+        uses: ./
+        with:
+          html_file: index.html
+          site_root: .tmp/generated-site
+          artifact_format: archive
+          artifact_name: generated-site-archive-preview
+      - name: Assert multi-file archive preview outputs
+        run: |
+          test "${{ steps.generated_site_archive_preview.outputs.mode }}" = "artifact"
+          test "${{ steps.generated_site_archive_preview.outputs.upload_strategy }}" = "archive"
+          test "${{ steps.generated_site_archive_preview.outputs.artifact_count }}" = "1"
+          test "${{ steps.generated_site_archive_preview.outputs.discovered_files_count }}" = "6"
+          test -n "${{ steps.generated_site_archive_preview.outputs.artifact_url }}"
+      - name: Validate repo mode still works
+        id: repo_preview
+        uses: ./
+        with:
+          mode: repo
+          html_file: index.html
+          site_root: test/fixtures/basic-single-file
+      - name: Assert repo mode outputs
+        run: |
+          test "${{ steps.repo_preview.outputs.mode }}" = "repo"
+          test "${{ steps.repo_preview.outputs.upload_strategy }}" = "repo"
+          test "${{ steps.repo_preview.outputs.discovered_files_count }}" = "1"
+          test -n "${{ steps.repo_preview.outputs.url }}"
