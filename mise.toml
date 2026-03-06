@@ -1,2 +1,4 @@
 [tools]
 act = "latest"
+node = "24"
+pnpm = "latest"

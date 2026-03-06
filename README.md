@@ -8,8 +8,9 @@ By default, the action:
 
 - resolves an entry HTML file from `site_root`
 - discovers linked local HTML pages and assets under that root
-- uploads each discovered file as its own non-zipped artifact for easier online viewing
-- exposes a primary artifact URL, aggregate artifact metadata, and PR-comment-friendly markdown outputs
+- uploads a non-zipped artifact when only a single file is included
+- falls back to an archived artifact when multiple linked files are needed so the preview remains self-consistent
+- exposes a primary artifact URL, artifact metadata, and PR-comment-friendly markdown outputs
 
 This keeps the action simple: run it once per entrypoint, then compose your own PR comment step if you want to surface one or many previews in the pull request.
 
@@ -37,6 +38,8 @@ That means this action now favors CI-generated HTML over checked-in blob URLs.
 
 The default artifact delivery format is `raw`.
 
+For multi-file previews, `raw` automatically falls back to `archive` because stable in-artifact links are required for HTML pages, linked pages, CSS, JS, and images to keep working together.
+
 Examples:
 
 - `dist/index.html`
@@ -46,28 +49,25 @@ Examples:
 
 ## Single-file vs multi-file uploads
 
-In `artifact` mode, this action now supports two explicit delivery formats:
+In `artifact` mode, this action supports two delivery formats:
 
 - **`artifact_format: raw`**
   - default
-  - uploads each discovered file as its own non-zipped artifact
-  - best when maintainers want directly viewable/downloadable HTML and asset files from the Actions UI
+  - uploads a single discovered file as a non-zipped artifact
+  - automatically falls back to `archive` when multiple files are required
 
 - **`artifact_format: archive`**
   - opt-in
   - uploads the full discovered preview payload as one archived artifact
-  - useful when maintainers want one bundle to download and preview locally
+  - useful when maintainers explicitly want one bundle to download and preview locally
 
 So the action uses these upload strategies:
 
 - `raw`
   - when only the entry HTML file is included
 
-- `multi_raw`
-  - when multiple discovered files are uploaded as separate non-zipped artifacts
-
 - `archive`
-  - when `artifact_format: archive` is selected
+  - when multiple files are discovered, or when `artifact_format: archive` is selected
 
 The resolved strategy is exposed via `steps.<id>.outputs.upload_strategy`.
 
@@ -194,6 +194,7 @@ If you have multiple entrypoints, run this action multiple times with different 
   - Artifact delivery format used in `artifact` mode
   - Default: `raw`
   - Supported values: `raw`, `archive`
+  - `raw` falls back to `archive` when multiple discovered files are needed
 
 - `html_file`
   - Entry HTML file relative to `site_root`
@@ -204,7 +205,7 @@ If you have multiple entrypoints, run this action multiple times with different 
 
 - `artifact_name`
   - Optional archive artifact name
-  - In `raw` multi-file mode, used as a filename prefix for uploaded raw artifacts
+  - Ignored for single-file raw uploads because GitHub uses the uploaded filename as the artifact name
 
 - `retention_days`
   - Artifact retention in days
@@ -231,6 +232,7 @@ If you have multiple entrypoints, run this action multiple times with different 
 
 - `artifact_count`
   - Number of uploaded artifacts in `artifact` mode
+  - Currently `1` for artifact previews
 
 - `artifact_names`
   - JSON array of uploaded artifact names
@@ -251,7 +253,7 @@ If you have multiple entrypoints, run this action multiple times with different 
   - Resolved preview mode
 
 - `upload_strategy`
-  - `raw`, `multi_raw`, `archive`, or `repo`
+  - `raw`, `archive`, or `repo`
 
 - `discovered_files_count`
   - Number of files included in the preview payload
@@ -279,6 +281,25 @@ If you still want the old checked-in-file behavior, you can use `mode: repo`.
 > [!NOTE]
 > Please read the [action.yml](https://github.com/pavi2410/html-preview-action/blob/master/action.yml) to learn more.
 
+## Development
+
+This repository now uses:
+
+- Node 24
+- pnpm
+- TypeScript source files under `src/`
+- `tsdown` for the bundled ESM build with sourcemaps
+- `oxlint` and `oxfmt` for linting and formatting
+
+Common commands:
+
+```bash
+pnpm install
+pnpm test
+pnpm typecheck
+pnpm lint
+pnpm build
+```
 
 ## Credits
 https://github.com/htmlpreview/htmlpreview.github.com

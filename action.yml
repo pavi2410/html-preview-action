@@ -7,7 +7,7 @@ inputs:
     required: false
     default: 'artifact'
   artifact_format:
-    description: 'Artifact delivery format for artifact mode'
+    description: 'Artifact delivery format for artifact mode; raw uploads a single file directly when possible and falls back to archive for multi-file previews'
     required: false
     default: 'raw'
   html_file:
@@ -19,7 +19,7 @@ inputs:
     required: false
     default: '.'
   artifact_name:
-    description: 'Optional archive artifact name, or raw artifact filename prefix when uploading multiple files'
+    description: 'Optional artifact name override for archived uploads; ignored for single-file raw uploads'
     required: false
   retention_days:
     description: 'Artifact retention in days, or 0 to use the repository default'
@@ -62,7 +62,7 @@ outputs:
     description: 'Markdown text that can be forwarded to a PR comment action'
 runs:
   using: 'node24'
-  main: 'dist/index.js'
+  main: 'dist/index.mjs'
 branding:
   color: 'orange'
   icon: 'eye'
