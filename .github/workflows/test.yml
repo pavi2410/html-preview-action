@@ -58,14 +58,11 @@ jobs:
         with:
           html_file: index.html
           site_root: .tmp/generated-single
-          artifact_name: generated-single-preview
       - name: Assert single-file preview outputs
         run: |
-          test "${{ steps.single_file_preview.outputs.mode }}" = "artifact"
-          test "${{ steps.single_file_preview.outputs.upload_strategy }}" = "raw"
-          test "${{ steps.single_file_preview.outputs.artifact_count }}" = "1"
           test "${{ steps.single_file_preview.outputs.discovered_files_count }}" = "1"
           test -n "${{ steps.single_file_preview.outputs.artifact_url }}"
+          printf '%s' '${{ steps.single_file_preview.outputs.result_json }}' | grep '"resolved":"raw"'
 
   preview_multi_file_default:
     needs: quality
@@ -95,15 +92,11 @@ jobs:
         with:
           html_file: index.html
           site_root: .tmp/generated-site
-          artifact_name: generated-site-preview
       - name: Assert multi-file preview outputs
         run: |
-          test "${{ steps.generated_site_preview.outputs.mode }}" = "artifact"
-          test "${{ steps.generated_site_preview.outputs.upload_strategy }}" = "archive"
-          test "${{ steps.generated_site_preview.outputs.artifact_count }}" = "1"
           test "${{ steps.generated_site_preview.outputs.discovered_files_count }}" = "6"
           test -n "${{ steps.generated_site_preview.outputs.artifact_url }}"
-          test -n "${{ steps.generated_site_preview.outputs.artifact_manifest }}"
+          printf '%s' '${{ steps.generated_site_preview.outputs.result_json }}' | grep '"resolved":"archive"'
 
   preview_multi_file_archive:
     needs: quality
@@ -133,43 +126,40 @@ jobs:
         with:
           html_file: index.html
           site_root: .tmp/generated-site
-          artifact_format: archive
-          artifact_name: generated-site-archive-preview
+          upload: archive
+          archive_name: generated-site-archive-preview
       - name: Assert multi-file archive preview outputs
         run: |
-          test "${{ steps.generated_site_archive_preview.outputs.mode }}" = "artifact"
-          test "${{ steps.generated_site_archive_preview.outputs.upload_strategy }}" = "archive"
-          test "${{ steps.generated_site_archive_preview.outputs.artifact_count }}" = "1"
           test "${{ steps.generated_site_archive_preview.outputs.discovered_files_count }}" = "6"
           test -n "${{ steps.generated_site_archive_preview.outputs.artifact_url }}"
+          printf '%s' '${{ steps.generated_site_archive_preview.outputs.result_json }}' | grep '"requested":"archive"'
 
-  preview_repo_mode:
+  v4_compatibility:
     needs: quality
     runs-on: ubuntu-latest
-    name: Preview Repo Mode
+    name: V4 Compatibility Fallback
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Build action bundle
-        run: pnpm build
-      - name: Validate repo mode still works
+      - name: Build repo preview URL
         id: repo_preview
-        uses: ./
-        with:
-          mode: repo
-          html_file: index.html
-          site_root: test/fixtures/basic-single-file
-      - name: Assert repo mode outputs
+        env:
+          HTML_FILE: test/fixtures/basic-single-file/index.html
         run: |
-          test "${{ steps.repo_preview.outputs.mode }}" = "repo"
-          test "${{ steps.repo_preview.outputs.upload_strategy }}" = "repo"
-          test "${{ steps.repo_preview.outputs.discovered_files_count }}" = "1"
-          test -n "${{ steps.repo_preview.outputs.url }}"
+          preview_url="https://htmlpreview.github.io/?https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/${HTML_FILE}"
+          {
+            echo "url=${preview_url}"
+            echo "comment_body<<EOF"
+            echo "HTML preview for \`${HTML_FILE}\`"
+            echo
+            echo "[Open preview URL](${preview_url})"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+      - name: Assert v4 compatibility outputs
+        env:
+          EXPECTED_URL: https://htmlpreview.github.io/?https://github.com/${{ github.repository }}/blob/${{ github.sha }}/test/fixtures/basic-single-file/index.html
+        run: |
+          test "${{ steps.repo_preview.outputs.url }}" = "$EXPECTED_URL"
+          printf '%s' '${{ steps.repo_preview.outputs.comment_body }}' | grep 'HTML preview for `test/fixtures/basic-single-file/index.html`'
+          printf '%s' '${{ steps.repo_preview.outputs.comment_body }}' | grep "$EXPECTED_URL"

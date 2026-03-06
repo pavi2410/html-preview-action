@@ -50,7 +50,7 @@ export type DiscoverHtmlDependenciesResult = {
 };
 
 type BuildArchiveArtifactNameInput = {
-  artifactNameInput: string;
+  archiveNameInput: string;
   relativeHtmlFile: string;
 };
 
@@ -62,33 +62,44 @@ type BuildArtifactUrlInput = {
   artifactId: string | number;
 };
 
-type BuildRepoPreviewUrlInput = {
-  serverUrl: string;
-  owner: string;
-  repo: string;
-  sha: string;
-  htmlFile: string;
-};
-
-export type ArtifactEntry = {
-  relativePath: string;
-  artifactId: string;
-  artifactName: string;
-  artifactUrl: string;
-  isEntry: boolean;
-};
-
 type BuildCommentBodyInput = {
   relativeHtmlFile: string;
   relativeSiteRoot: string;
   artifactUrl: string;
-  artifactEntries?: ArtifactEntry[];
-  sourceUrl?: string;
-  uploadStrategy: string;
-  artifactCount: number;
+  artifactName: string;
+  requestedUpload: "auto" | "archive";
+  resolvedUpload: "raw" | "archive";
   discoveredFilesCount: number;
   skippedReferencesCount: number;
-  mode: string;
+};
+
+type BuildResultJsonInput = {
+  relativeHtmlFile: string;
+  relativeSiteRoot: string;
+  artifactUrl: string;
+  artifactId: string;
+  artifactName: string;
+  requestedUpload: "auto" | "archive";
+  resolvedUpload: "raw" | "archive";
+  discoveredFilesCount: number;
+  skippedReferencesCount: number;
+};
+
+export type PreviewResult = {
+  artifact: {
+    id: string;
+    name: string;
+    url: string;
+  };
+  discoveredFilesCount: number;
+  entryHtmlFile: string;
+  siteRoot: string;
+  skippedReferencesCount: number;
+  upload: {
+    requested: "auto" | "archive";
+    resolved: "raw" | "archive";
+  };
+  url: string;
 };
 
 export function toPosixPath(value: string): string {
@@ -388,11 +399,11 @@ function sanitizeArtifactNameSegment(value: string): string {
 }
 
 export function buildArchiveArtifactName({
-  artifactNameInput,
+  archiveNameInput,
   relativeHtmlFile,
 }: BuildArchiveArtifactNameInput): string {
-  if (artifactNameInput) {
-    return artifactNameInput.trim();
+  if (archiveNameInput) {
+    return archiveNameInput.trim();
   }
 
   const baseName = sanitizeArtifactNameSegment(relativeHtmlFile);
@@ -423,70 +434,62 @@ export function buildArtifactUrl({
   return `${serverUrl}/${owner}/${repo}/actions/runs/${runId}/artifacts/${artifactId}`;
 }
 
-export function buildRepoPreviewUrl({
-  serverUrl,
-  owner,
-  repo,
-  sha,
-  htmlFile,
-}: BuildRepoPreviewUrlInput) {
-  const sourceUrl = encodeURI(`${serverUrl}/${owner}/${repo}/blob/${sha}/${htmlFile}`);
-  return {
-    sourceUrl,
-    previewUrl: `https://htmlpreview.github.io/?${sourceUrl}`,
-  };
-}
-
 export function buildCommentBody({
   relativeHtmlFile,
   relativeSiteRoot,
   artifactUrl,
-  artifactEntries = [],
-  sourceUrl,
-  uploadStrategy,
-  artifactCount,
+  artifactName,
+  requestedUpload,
+  resolvedUpload,
   discoveredFilesCount,
   skippedReferencesCount,
-  mode,
 }: BuildCommentBodyInput): string {
   const lines: string[] = [];
 
   lines.push(`HTML preview for \`${relativeHtmlFile}\``);
   lines.push("");
 
-  if (mode === "artifact") {
-    lines.push(`[Open preview artifact](${artifactUrl})`);
-    lines.push("");
-    lines.push(`- Mode: artifact`);
-    lines.push(`- Site root: \`${relativeSiteRoot}\``);
-    lines.push(`- Upload strategy: ${uploadStrategy}`);
-    lines.push(`- Artifact uploads: ${artifactCount}`);
-    lines.push(`- Files included: ${discoveredFilesCount}`);
-    lines.push(`- References skipped: ${skippedReferencesCount}`);
-
-    if (artifactEntries.length > 1) {
-      lines.push("");
-      lines.push(`Artifacts:`);
-
-      for (const artifactEntry of artifactEntries.slice(0, 10)) {
-        const title = artifactEntry.isEntry
-          ? `${artifactEntry.relativePath} (entry)`
-          : artifactEntry.relativePath;
-        lines.push(`- [${title}](${artifactEntry.artifactUrl})`);
-      }
-
-      if (artifactEntries.length > 10) {
-        lines.push(`- ...and ${artifactEntries.length - 10} more artifacts`);
-      }
-    }
-  } else {
-    lines.push(`[Open preview URL](${artifactUrl})`);
-    lines.push("");
-    lines.push(`- Mode: repo`);
-    lines.push(`- Source URL: ${sourceUrl}`);
-  }
+  lines.push(`[Open preview artifact](${artifactUrl})`);
+  lines.push("");
+  lines.push(`- Site root: \`${relativeSiteRoot}\``);
+  lines.push(`- Requested upload: ${requestedUpload}`);
+  lines.push(`- Resolved upload: ${resolvedUpload}`);
+  lines.push(`- Artifact name: ${artifactName}`);
+  lines.push(`- Files included: ${discoveredFilesCount}`);
+  lines.push(`- References skipped: ${skippedReferencesCount}`);
 
   return lines.join("\n");
+}
+
+export function buildResultJson({
+  relativeHtmlFile,
+  relativeSiteRoot,
+  artifactUrl,
+  artifactId,
+  artifactName,
+  requestedUpload,
+  resolvedUpload,
+  discoveredFilesCount,
+  skippedReferencesCount,
+}: BuildResultJsonInput): string {
+  const result: PreviewResult = {
+    artifact: {
+      id: artifactId,
+      name: artifactName,
+      url: artifactUrl,
+    },
+    discoveredFilesCount,
+    entryHtmlFile: relativeHtmlFile,
+    siteRoot: relativeSiteRoot,
+    skippedReferencesCount,
+    upload: {
+      requested: requestedUpload,
+      resolved: resolvedUpload,
+    },
+    url: artifactUrl,
+  };
+
+  return JSON.stringify(result);
 }
 
 export function formatSkippedReferences(
@@ -500,11 +503,8 @@ export function formatSkippedReferences(
   }));
 }
 
-export function getUploadStrategy(
-  files: DiscoveredFile[],
-  artifactFormat: string,
-): "raw" | "archive" {
-  if (artifactFormat === "archive" || files.length > 1) {
+export function getUploadStrategy(files: DiscoveredFile[], uploadInput: string): "raw" | "archive" {
+  if (uploadInput === "archive" || files.length > 1) {
     return "archive";
   }
 

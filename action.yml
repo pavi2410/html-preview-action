@@ -2,14 +2,10 @@ name: 'HTML Preview'
 author: 'Pavitra Golchha | @pavi2410'
 description: 'Upload preview artifacts for HTML files and generated sites'
 inputs:
-  mode:
-    description: 'Preview mode to use'
+  upload:
+    description: 'Upload behavior; auto uses a raw upload for a single discovered file and falls back to an archive for multi-file previews'
     required: false
-    default: 'artifact'
-  artifact_format:
-    description: 'Artifact delivery format for artifact mode; raw uploads a single file directly when possible and falls back to archive for multi-file previews'
-    required: false
-    default: 'raw'
+    default: 'auto'
   html_file:
     description: 'The entry HTML file to preview, relative to site_root'
     required: true
@@ -18,7 +14,7 @@ inputs:
     description: 'The root directory used for resolving the entry HTML file and related assets/pages'
     required: false
     default: '.'
-  artifact_name:
+  archive_name:
     description: 'Optional artifact name override for archived uploads; ignored for single-file raw uploads'
     required: false
   retention_days:
@@ -33,31 +29,17 @@ outputs:
   url:
     description: 'The primary preview URL for this action run'
   artifact_url:
-    description: 'The primary uploaded artifact URL when mode is artifact'
+    description: 'The uploaded artifact URL for this action run'
   artifact_id:
-    description: 'The primary uploaded artifact ID when mode is artifact'
+    description: 'The uploaded artifact ID for this action run'
   artifact_name:
-    description: 'The primary uploaded artifact name when mode is artifact'
-  artifact_count:
-    description: 'The number of artifacts uploaded in artifact mode'
-  artifact_names:
-    description: 'JSON array of uploaded artifact names in artifact mode'
-  artifact_ids:
-    description: 'JSON array of uploaded artifact IDs in artifact mode'
-  artifact_urls:
-    description: 'JSON array of uploaded artifact URLs in artifact mode'
-  artifact_manifest:
-    description: 'JSON array describing each uploaded artifact and its source relative path'
-  source_url:
-    description: 'The source blob URL when mode is repo'
-  mode:
-    description: 'The resolved preview mode'
-  upload_strategy:
-    description: 'The upload strategy used for artifact mode'
+    description: 'The uploaded artifact name for this action run'
   discovered_files_count:
     description: 'The number of files discovered for the preview payload'
   skipped_references_count:
     description: 'The number of references skipped during discovery'
+  result_json:
+    description: 'JSON object describing the preview artifact, upload resolution, and discovery counts'
   comment_body:
     description: 'Markdown text that can be forwarded to a PR comment action'
 runs:

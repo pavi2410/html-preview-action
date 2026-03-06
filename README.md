@@ -2,17 +2,17 @@
 
 Upload preview artifacts for an HTML entrypoint and its related files from a GitHub Actions workflow.
 
-`v5` is a breaking, artifact-first update focused on the most common use case for this action: previewing HTML generated during CI.
+`v5` is a breaking, artifact-only update focused on the most common use case for this action: previewing HTML generated during CI. If you need the old checked-in repo/blob preview behavior, jump to [Migrating from repo-mode usage](#migrating-from-repo-mode-usage).
 
-By default, the action:
+This action is designed for outputs like:
 
-- resolves an entry HTML file from `site_root`
-- discovers linked local HTML pages and assets under that root
-- uploads a non-zipped artifact when only a single file is included
-- falls back to an archived artifact when multiple linked files are needed so the preview remains self-consistent
-- exposes a primary artifact URL, artifact metadata, and PR-comment-friendly markdown outputs
+- generated docs sites
+- test reports
+- coverage reports
+- static sites emitted during CI
+- HTML dashboards with local CSS, JS, images, or linked pages
 
-This keeps the action simple: run it once per entrypoint, then compose your own PR comment step if you want to surface one or many previews in the pull request.
+Run it once per entry HTML file, then use the returned outputs in your own summary or PR comment step if you want.
 
 ## Usage
 
@@ -23,53 +23,60 @@ This keeps the action simple: run it once per entrypoint, then compose your own 
   with:
     html_file: index.html
     site_root: dist
+    upload: auto
     job_summary: true
 ```
 
-The primary output is `steps.html_preview.outputs.url`.
+The primary output is `steps.html_preview.outputs.url`, which points to the uploaded artifact for this preview run.
 
-In the default `artifact` mode, `url` is the uploaded artifact URL for the entry HTML file.
+## How this action works
 
-## Default behavior in `v5`
+When the action runs, it does the following:
 
-The default mode is `artifact`.
+1. Resolves `html_file` inside `site_root`
+2. Recursively discovers local linked HTML pages and local assets under that root
+3. Ignores references that are:
+   - remote (`http:`, `https:`)
+   - non-previewable (`data:`, `mailto:`, `javascript:`)
+   - outside `site_root`
+   - missing on disk
+4. Chooses an upload strategy:
+   - `raw` when only one file is included
+   - `archive` when multiple files are needed, or when you explicitly request `upload: archive`
+5. Uploads the preview payload as a GitHub Actions artifact
+6. Exposes the artifact URL plus summary metadata via outputs
 
-That means this action now favors CI-generated HTML over checked-in blob URLs.
+This behavior is intentional: multi-file previews need stable in-artifact paths so linked CSS, images, JS, and nested pages continue to work together.
 
-The default artifact delivery format is `raw`.
+## Is this action a good fit?
 
-For multi-file previews, `raw` automatically falls back to `archive` because stable in-artifact links are required for HTML pages, linked pages, CSS, JS, and images to keep working together.
+This action is a good fit when:
 
-Examples:
+- your HTML is generated during CI
+- the preview payload lives inside a known output directory like `dist/` or `build/`
+- you want local linked assets and pages discovered automatically
+- you want a GitHub artifact URL plus comment-friendly metadata
 
-- `dist/index.html`
-- `build/docs/index.html`
-- generated static documentation
-- generated HTML reports with local CSS, JS, images, or linked pages
+This action is probably not a good fit when:
 
-## Single-file vs multi-file uploads
+- you want preview behavior for checked-in repository files without generating artifacts
+- you need custom hosting, custom routing, or a public deployment URL
+- your site relies heavily on remote runtime behavior that artifact downloads do not model
+- you want the action itself to post PR comments automatically
 
-In `artifact` mode, this action supports two delivery formats:
+## Upload behavior
 
-- **`artifact_format: raw`**
+- **`upload: auto`**
   - default
-  - uploads a single discovered file as a non-zipped artifact
+  - uploads a single discovered file as a non-zipped artifact when possible
   - automatically falls back to `archive` when multiple files are required
 
-- **`artifact_format: archive`**
+- **`upload: archive`**
   - opt-in
   - uploads the full discovered preview payload as one archived artifact
-  - useful when maintainers explicitly want one bundle to download and preview locally
+  - useful when you explicitly want one bundle even if the entrypoint is a single file
 
-So the action uses these upload strategies:
-
-- `raw`
-  - when only the entry HTML file is included
-
-- `archive`
-  - when multiple files are discovered, or when `artifact_format: archive` is selected
-
-The resolved strategy is exposed via `steps.<id>.outputs.upload_strategy`.
+The resolved behavior is included in `result_json`.
 
 ## Discovery behavior
 
@@ -107,7 +114,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build site
         run: |
@@ -120,15 +127,27 @@ jobs:
         with:
           html_file: index.html
           site_root: dist
-          artifact_name: preview-site
           job_summary: true
+```
+
+## Example: force an archive upload
+
+```yaml
+- name: Upload preview as archive
+  id: archived_preview
+  uses: pavi2410/html-preview-action@v5
+  with:
+    html_file: index.html
+    site_root: dist
+    upload: archive
+    archive_name: preview-site
 ```
 
 ## Compose a PR comment yourself
 
 This action does not post PR comments by itself.
 
-Instead, use `comment_body` or any of the individual outputs in your own PR comment step.
+Instead, use `comment_body` or `result_json` in your own PR comment step.
 
 ```yaml
 name: Preview HTML in PR
@@ -146,7 +165,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build docs
         run: |
@@ -170,31 +189,12 @@ jobs:
 
 If you have multiple entrypoints, run this action multiple times with different step ids and compose the final PR comment however you like.
 
-## Example: explicit archive upload
-
-```yaml
-- name: Upload preview as archive
-  id: archived_preview
-  uses: pavi2410/html-preview-action@v5
-  with:
-    html_file: index.html
-    site_root: dist
-    artifact_format: archive
-    artifact_name: preview-site-archive
-```
-
 ## Inputs
 
-- `mode`
-  - Preview mode
-  - Default: `artifact`
-  - Supported values today: `artifact`, `repo`
-
-- `artifact_format`
-  - Artifact delivery format used in `artifact` mode
-  - Default: `raw`
-  - Supported values: `raw`, `archive`
-  - `raw` falls back to `archive` when multiple discovered files are needed
+- `upload`
+  - Upload behavior
+  - Default: `auto`
+  - Supported values: `auto`, `archive`
 
 - `html_file`
   - Entry HTML file relative to `site_root`
@@ -203,7 +203,7 @@ If you have multiple entrypoints, run this action multiple times with different 
   - Root directory used for resolving the entry HTML file and related files
   - Default: `.`
 
-- `artifact_name`
+- `archive_name`
   - Optional archive artifact name
   - Ignored for single-file raw uploads because GitHub uses the uploaded filename as the artifact name
 
@@ -219,41 +219,16 @@ If you have multiple entrypoints, run this action multiple times with different 
 
 - `url`
   - Primary preview URL for the run
-  - In `artifact` mode, this is the entry HTML artifact URL
+  - Same value as `artifact_url`
 
 - `artifact_url`
-  - Primary uploaded artifact URL in `artifact` mode
+  - Uploaded artifact URL
 
 - `artifact_id`
-  - Primary uploaded artifact ID in `artifact` mode
+  - Uploaded artifact ID
 
 - `artifact_name`
-  - Primary uploaded artifact name in `artifact` mode
-
-- `artifact_count`
-  - Number of uploaded artifacts in `artifact` mode
-  - Currently `1` for artifact previews
-
-- `artifact_names`
-  - JSON array of uploaded artifact names
-
-- `artifact_ids`
-  - JSON array of uploaded artifact IDs
-
-- `artifact_urls`
-  - JSON array of uploaded artifact URLs
-
-- `artifact_manifest`
-  - JSON array of uploaded artifact records with `relativePath`, `artifactName`, `artifactId`, `artifactUrl`, and `isEntry`
-
-- `source_url`
-  - Source blob URL in `repo` mode
-
-- `mode`
-  - Resolved preview mode
-
-- `upload_strategy`
-  - `raw`, `archive`, or `repo`
+  - Uploaded artifact name
 
 - `discovered_files_count`
   - Number of files included in the preview payload
@@ -261,22 +236,68 @@ If you have multiple entrypoints, run this action multiple times with different 
 - `skipped_references_count`
   - Number of skipped references during discovery
 
+- `result_json`
+  - JSON object containing:
+    - artifact metadata
+    - requested and resolved upload behavior
+    - preview URL
+    - entry HTML file
+    - site root
+    - discovery counts
+
 - `comment_body`
   - Markdown you can forward into a PR comment action
 
-## Optional fallback: repo mode
+## Migrating from repo-mode usage
 
-If you still want the old checked-in-file behavior, you can use `mode: repo`.
+`v5` no longer supports repo/blob preview mode.
+
+If your workflow previously depended on checked-in file previews, you have two options:
+
+- keep using `v4`
+- construct the preview URL yourself in your workflow:
+
+```ts
+const previewUrl = `https://htmlpreview.github.io/?https://github.com/${owner}/${repo}/blob/${sha}/${htmlFile}`;
+```
+
+For most existing users, a drop-in workflow-step replacement is enough.
+
+### Copy-pasteable replacement step
+
+This step recreates the old repo/blob preview URL and exposes `url` and `comment_body` outputs you can use in later steps:
 
 ```yaml
-- name: Repo mode preview
+- name: Build repo preview URL
   id: repo_preview
-  uses: pavi2410/html-preview-action@v5
-  with:
-    mode: repo
-    html_file: index.html
-    site_root: .
+  env:
+    HTML_FILE: index.html
+  run: |
+    preview_url="https://htmlpreview.github.io/?https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/${HTML_FILE}"
+    {
+      echo "url=${preview_url}"
+      echo "comment_body<<EOF"
+      echo "HTML preview for \`${HTML_FILE}\`"
+      echo
+      echo "[Open preview URL](${preview_url})"
+      echo "EOF"
+    } >> "$GITHUB_OUTPUT"
 ```
+
+For example, you can use it similarly to the old action outputs:
+
+```yaml
+- name: Comment preview URL on PR
+  uses: peter-evans/create-or-update-comment@v4
+  with:
+    issue-number: ${{ github.event.pull_request.number }}
+    body: |
+      ${{ steps.repo_preview.outputs.comment_body }}
+```
+
+If your old workflow passed a different checked-in path, change `HTML_FILE` accordingly.
+
+That path is intentionally not built into `v5`, because this major rewrite is focused on CI-generated preview artifacts.
 
 > [!NOTE]
 > Please read the [action.yml](https://github.com/pavi2410/html-preview-action/blob/master/action.yml) to learn more.

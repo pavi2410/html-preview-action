@@ -6,6 +6,7 @@ import {
   buildArchiveArtifactName,
   buildArtifactUrl,
   buildCommentBody,
+  buildResultJson,
   discoverHtmlDependencies,
   getUploadStrategy,
   parseIntegerInput,
@@ -58,7 +59,7 @@ test("discoverHtmlDependencies includes linked pages and assets", () => {
       "nested/team.html",
     ],
   );
-  assert.equal(getUploadStrategy(result.files, "raw"), "archive");
+  assert.equal(getUploadStrategy(result.files, "auto"), "archive");
   assert.equal(getUploadStrategy(result.files, "archive"), "archive");
   assert.equal(result.skippedReferences.length, 0);
   assert.ok(result.files.some((file) => file.relativePath === "images/logo.svg"));
@@ -93,10 +94,10 @@ test("single-file discovery uses raw upload strategy and generated archive name 
   });
 
   assert.equal(result.files.length, 1);
-  assert.equal(getUploadStrategy(result.files, "raw"), "raw");
+  assert.equal(getUploadStrategy(result.files, "auto"), "raw");
   assert.match(
     buildArchiveArtifactName({
-      artifactNameInput: "",
+      archiveNameInput: "",
       relativeHtmlFile: "index.html",
     }),
     /^html-preview-index\.html-/,
@@ -125,24 +126,41 @@ test("parseIntegerInput and URL/comment helpers produce expected metadata", () =
     relativeHtmlFile: "index.html",
     relativeSiteRoot: "dist",
     artifactUrl,
-    artifactEntries: [
-      {
-        relativePath: "index.html",
-        artifactUrl,
-        artifactId: "456",
-        artifactName: "preview-site",
-        isEntry: true,
-      },
-    ],
-    uploadStrategy: "archive",
-    artifactCount: 1,
+    artifactName: "preview-site",
+    requestedUpload: "auto",
+    resolvedUpload: "archive",
     discoveredFilesCount: 3,
     skippedReferencesCount: 1,
-    mode: "artifact",
   });
 
   assert.match(commentBody, /Open preview artifact/);
-  assert.match(commentBody, /Artifact uploads: 1/);
+  assert.match(commentBody, /Requested upload: auto/);
+  assert.match(commentBody, /Resolved upload: archive/);
   assert.match(commentBody, /Files included: 3/);
   assert.match(commentBody, /References skipped: 1/);
+
+  const resultJson = buildResultJson({
+    relativeHtmlFile: "index.html",
+    relativeSiteRoot: "dist",
+    artifactUrl,
+    artifactId: "456",
+    artifactName: "preview-site",
+    requestedUpload: "auto",
+    resolvedUpload: "archive",
+    discoveredFilesCount: 3,
+    skippedReferencesCount: 1,
+  });
+  const result = JSON.parse(resultJson) as {
+    artifact: { id: string; name: string; url: string };
+    upload: { requested: string; resolved: string };
+    discoveredFilesCount: number;
+    skippedReferencesCount: number;
+  };
+
+  assert.equal(result.artifact.id, "456");
+  assert.equal(result.artifact.name, "preview-site");
+  assert.equal(result.upload.requested, "auto");
+  assert.equal(result.upload.resolved, "archive");
+  assert.equal(result.discoveredFilesCount, 3);
+  assert.equal(result.skippedReferencesCount, 1);
 });
