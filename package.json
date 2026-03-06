@@ -1,19 +1,33 @@
 {
   "name": "html-preview-action",
-  "version": "3.0.0",
-  "description": "GitHub action to preview HTML page",
+  "version": "5.0.0",
+  "description": "GitHub action to upload preview artifacts for HTML files and generated sites",
   "private": true,
   "type": "module",
-  "main": "index.js",
+  "main": "dist/index.mjs",
+  "packageManager": "pnpm@10.30.3",
   "scripts": {
-    "package": "ncc build index.js -o dist"
+    "build": "tsdown",
+    "package": "pnpm run build",
+    "test": "tsx --test test/**/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint src test",
+    "lint:fix": "oxlint --fix src test",
+    "format": "oxfmt src/**/*.ts test/**/*.ts tsdown.config.ts",
+    "format:check": "oxfmt --check src/**/*.ts test/**/*.ts tsdown.config.ts"
   },
   "license": "MIT",
   "dependencies": {
-    "@actions/core": "^1.10.1",
-    "@actions/github": "^6.0.0"
+    "@actions/artifact": "^6.2.0",
+    "@actions/core": "^3.0.0",
+    "@actions/github": "^9.0.0"
   },
   "devDependencies": {
-    "@vercel/ncc": "^0.38.1"
+    "@types/node": "^24.0.0",
+    "oxfmt": "^0.36.0",
+    "oxlint": "^1.51.0",
+    "tsdown": "^0.20.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   }
 }

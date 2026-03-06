@@ -1,0 +1,6 @@
+body {
+  font-family: sans-serif;
+}
+.hero {
+  background-image: url("../images/logo.svg");
+}

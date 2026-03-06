@@ -1,19 +1,165 @@
 name: Test
 
-on: 
+on:
   workflow_dispatch:
   pull_request:
   push:
-    branches: master
+    branches: main
 
 jobs:
-  test:
+  quality:
     runs-on: ubuntu-latest
-    name: HTML Preview
+    name: Quality Checks
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - name: Get HTML preview link
-        id: html_preview
-        uses: ./ # NOTE: replace with the latest version of this Action
-      - name: Log HTML Preview URL
-        run: echo "${{ steps.html_preview.outputs.url }}"
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run unit tests
+        run: pnpm test
+      - name: Run typecheck
+        run: pnpm typecheck
+      - name: Run lint
+        run: pnpm lint
+      - name: Build action bundle
+        run: pnpm build
+
+  preview_single_file:
+    needs: quality
+    runs-on: ubuntu-latest
+    name: Preview Single File
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build action bundle
+        run: pnpm build
+      - name: Prepare generated single-file site
+        run: |
+          mkdir -p .tmp/generated-single
+          cp test/fixtures/basic-single-file/index.html .tmp/generated-single/index.html
+      - name: Upload generated single-file preview
+        id: single_file_preview
+        uses: ./
+        with:
+          html_file: index.html
+          site_root: .tmp/generated-single
+      - name: Assert single-file preview outputs
+        run: |
+          test "${{ steps.single_file_preview.outputs.discovered_files_count }}" = "1"
+          test -n "${{ steps.single_file_preview.outputs.artifact_url }}"
+          printf '%s' '${{ steps.single_file_preview.outputs.result_json }}' | grep '"resolved":"raw"'
+
+  preview_multi_file_default:
+    needs: quality
+    runs-on: ubuntu-latest
+    name: Preview Multi File Default
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build action bundle
+        run: pnpm build
+      - name: Prepare generated multi-file site
+        run: |
+          mkdir -p .tmp/generated-site
+          cp -R test/fixtures/linked-pages/. .tmp/generated-site/
+      - name: Upload generated multi-file preview
+        id: generated_site_preview
+        uses: ./
+        with:
+          html_file: index.html
+          site_root: .tmp/generated-site
+      - name: Assert multi-file preview outputs
+        run: |
+          test "${{ steps.generated_site_preview.outputs.discovered_files_count }}" = "6"
+          test -n "${{ steps.generated_site_preview.outputs.artifact_url }}"
+          printf '%s' '${{ steps.generated_site_preview.outputs.result_json }}' | grep '"resolved":"archive"'
+
+  preview_multi_file_archive:
+    needs: quality
+    runs-on: ubuntu-latest
+    name: Preview Multi File Archive
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build action bundle
+        run: pnpm build
+      - name: Prepare generated multi-file site
+        run: |
+          mkdir -p .tmp/generated-site
+          cp -R test/fixtures/linked-pages/. .tmp/generated-site/
+      - name: Upload generated multi-file preview as archive
+        id: generated_site_archive_preview
+        uses: ./
+        with:
+          html_file: index.html
+          site_root: .tmp/generated-site
+          upload: archive
+          archive_name: generated-site-archive-preview
+      - name: Assert multi-file archive preview outputs
+        run: |
+          test "${{ steps.generated_site_archive_preview.outputs.discovered_files_count }}" = "6"
+          test -n "${{ steps.generated_site_archive_preview.outputs.artifact_url }}"
+          printf '%s' '${{ steps.generated_site_archive_preview.outputs.result_json }}' | grep '"requested":"archive"'
+
+  v4_compatibility:
+    needs: quality
+    runs-on: ubuntu-latest
+    name: V4 Compatibility Fallback
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build repo preview URL
+        id: repo_preview
+        env:
+          HTML_FILE: test/fixtures/basic-single-file/index.html
+        run: |
+          preview_url="https://htmlpreview.github.io/?https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/${HTML_FILE}"
+          {
+            echo "url=${preview_url}"
+            echo "comment_body<<EOF"
+            echo "HTML preview for \`${HTML_FILE}\`"
+            echo
+            echo "[Open preview URL](${preview_url})"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+      - name: Assert v4 compatibility outputs
+        env:
+          EXPECTED_URL: https://htmlpreview.github.io/?https://github.com/${{ github.repository }}/blob/${{ github.sha }}/test/fixtures/basic-single-file/index.html
+        run: |
+          test "${{ steps.repo_preview.outputs.url }}" = "$EXPECTED_URL"
+          printf '%s' '${{ steps.repo_preview.outputs.comment_body }}' | grep 'HTML preview for `test/fixtures/basic-single-file/index.html`'
+          printf '%s' '${{ steps.repo_preview.outputs.comment_body }}' | grep "$EXPECTED_URL"
