@@ -11,4 +11,5 @@ export default defineConfig({
   platform: "node",
   sourcemap: true,
   target: "node24",
+  minify: true,
 });
